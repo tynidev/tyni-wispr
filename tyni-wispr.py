@@ -391,19 +391,19 @@ class RecordingOverlay:
             return
         
         self.is_showing = True
-        # Ensure that if a previous thread existed, it's allowed to terminate.
-        # Daemon threads will exit if the main program exits.
+        # Start the overlay thread
+        # Daemon thread to ensure it exits when the main program does
         self.thread = threading.Thread(target=self._create_overlay, daemon=True)
         self.thread.start()
     
     def hide(self):
         """Signal the recording overlay to hide."""
         if self.is_showing:
-            self.is_showing = False
+            self.is_showing = False # stop the overlay loop
+
             # Wait for the thread to finish cleaning up using a while loop
-            if self.thread and self.thread.is_alive():
-                while self.thread.is_alive():
-                    time.sleep(0.01)  # Small delay to avoid busy waiting
+            while self.thread and self.thread.is_alive():
+                time.sleep(0.01)  # Small delay to avoid busy waiting
     
     def _create_overlay(self):
         """Create and display the overlay window. This runs in a separate thread."""
@@ -420,13 +420,19 @@ class RecordingOverlay:
             frame = ttk.Frame(self.root, style='Recording.TFrame')
             frame.pack(fill='both', expand=True)
             
-            scale = 2.5
+            # configuration options
+            flash_on_color = 'white'
+            flash_off_color = '#FF0000' # Same as background to make text "disappear"
+            flash_interval = 0.5  # seconds for each state (on/off)
+            is_text_visible = True
+            scale = 2
+
             style = ttk.Style()
-            style.configure('Recording.TFrame', background='#FF0000')
-            style.configure('Recording.TLabel', background='#FF0000', foreground='white', font=('Arial', int(12 * scale), 'bold'))
+            style.configure('Recording.TFrame', background=flash_off_color)
+            style.configure('Recording.TLabel', background=flash_off_color, foreground=flash_on_color, font=('Arial Black', int(12 * scale), 'bold'))
             
             label = ttk.Label(frame, text="REC", style='Recording.TLabel')
-            label.pack(expand=True, padx=int(10 * scale), pady=int(10 * scale))
+            label.pack(expand=True, padx=int(10 * scale), pady=int(8 * scale))
             
             # Position in top right corner
             self.root.update_idletasks()
@@ -437,23 +443,34 @@ class RecordingOverlay:
             
             while self.is_showing:
                 if self.root:
-                    self.root.update()
-                time.sleep(0.01)
+                    # Flash the text by toggling visibility
+                    if is_text_visible:
+                        style.configure('Recording.TLabel', foreground=flash_on_color)
+                        style.configure('Recording.TLabel', background=flash_off_color)
+                        style.configure('Recording.TFrame', background=flash_off_color)
+                    else:
+                        style.configure('Recording.TLabel', foreground=flash_off_color)
+                        style.configure('Recording.TLabel', background=flash_on_color) 
+                        style.configure('Recording.TFrame', background=flash_on_color)
+                    is_text_visible = not is_text_visible # Toggle visibility for next flash
+                    self.root.update() # Refresh the Tkinter window
+                time.sleep(flash_interval) # Control the flashing speed
 
         except Exception:
-            # Catch any errors during overlay management
             pass # Silently ignore, ensure finally block runs for cleanup
         finally:
-            # This block executes when the loop terminates (is_showing is False)
-            # or if an exception occurs in the try block.
+            # Cleanup: hide and destroy the overlay window
             if self.root:
                 try:
                     self.root.destroy() # Destroy the Tkinter window from its own thread
                 except tk.TclError:
                     pass # Window might already be destroyed
+
+            # Reset the root to None for future use
             self.root = None
-            # Ensure is_showing is false if an error caused premature exit from loop
-            self.is_showing = False
+            
+            # Ensure the thread is marked as finished
+            self.is_showing = False 
 
 if __name__ == "__main__":
     main()
