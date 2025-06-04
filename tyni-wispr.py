@@ -37,6 +37,9 @@ import time
 import csv
 import os
 from datetime import datetime
+import threading
+import tkinter as tk
+from tkinter import ttk
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="whisper")
 
@@ -69,7 +72,10 @@ def main():
     audio_buffer = []
     recording = False
     audio_stream = None
-
+    
+    # Create recording overlay
+    overlay = RecordingOverlay()
+    
     def record_audio_buffer(indata, frames, time, status):
         """Callback function for audio stream to capture audio data.
         
@@ -93,10 +99,12 @@ def main():
             if not SILENT_MODE:
                 print("🎙️  Recording...")
             audio_buffer = []
-            recording = True     
+            recording = True    
+            overlay.show()  # Show recording indicator 
             
             keyboard.wait(HOTKEY)  # Wait for another press to stop recording
             recording = False
+            overlay.hide()  # Hide recording indicator
             if not SILENT_MODE:
                 print("🛑 Recording stopped. Processing...")
 
@@ -122,6 +130,7 @@ def main():
     except KeyboardInterrupt:
         print("\n👋 Exiting.")
     finally:
+        overlay.hide()  # Ensure overlay is hidden on exit
         if audio_stream:
             audio_stream.stop()
             audio_stream.close()
@@ -367,6 +376,84 @@ def log_performance(model_name, transcription_time, text_length, audio_duration)
             'time_per_char_ms': round(time_per_char * 1000, 4),
             'realtime_factor': round(realtime_factor, 3)
         })
+
+class RecordingOverlay:
+    """A transparent overlay window that displays a recording indicator."""
+    
+    def __init__(self):
+        self.root = None
+        self.is_showing = False
+        self.thread = None
+        
+    def show(self):
+        """Show the recording overlay in a separate thread."""
+        if self.is_showing: # If already showing or in the process of showing
+            return
+        
+        self.is_showing = True
+        # Ensure that if a previous thread existed, it's allowed to terminate.
+        # Daemon threads will exit if the main program exits.
+        self.thread = threading.Thread(target=self._create_overlay, daemon=True)
+        self.thread.start()
+    
+    def hide(self):
+        """Signal the recording overlay to hide."""
+        if self.is_showing:
+            self.is_showing = False
+            # Wait for the thread to finish cleaning up using a while loop
+            if self.thread and self.thread.is_alive():
+                while self.thread.is_alive():
+                    time.sleep(0.01)  # Small delay to avoid busy waiting
+    
+    def _create_overlay(self):
+        """Create and display the overlay window. This runs in a separate thread."""
+        try:
+            self.root = tk.Tk()
+            self.root.title("Recording")
+            
+            self.root.attributes('-alpha', 0.9)
+            self.root.attributes('-topmost', True)
+            self.root.overrideredirect(True)
+            
+            screen_width = self.root.winfo_screenwidth()
+            
+            frame = ttk.Frame(self.root, style='Recording.TFrame')
+            frame.pack(fill='both', expand=True)
+            
+            scale = 2.5
+            style = ttk.Style()
+            style.configure('Recording.TFrame', background='#FF0000')
+            style.configure('Recording.TLabel', background='#FF0000', foreground='white', font=('Arial', int(12 * scale), 'bold'))
+            
+            label = ttk.Label(frame, text="REC", style='Recording.TLabel')
+            label.pack(expand=True, padx=int(10 * scale), pady=int(10 * scale))
+            
+            # Position in top right corner
+            self.root.update_idletasks()
+            window_width = self.root.winfo_width()
+            x_position = screen_width - window_width - 20
+            y_position = 20
+            self.root.geometry(f"+{x_position}+{y_position}")
+            
+            while self.is_showing:
+                if self.root:
+                    self.root.update()
+                time.sleep(0.01)
+
+        except Exception:
+            # Catch any errors during overlay management
+            pass # Silently ignore, ensure finally block runs for cleanup
+        finally:
+            # This block executes when the loop terminates (is_showing is False)
+            # or if an exception occurs in the try block.
+            if self.root:
+                try:
+                    self.root.destroy() # Destroy the Tkinter window from its own thread
+                except tk.TclError:
+                    pass # Window might already be destroyed
+            self.root = None
+            # Ensure is_showing is false if an error caused premature exit from loop
+            self.is_showing = False
 
 if __name__ == "__main__":
     main()
