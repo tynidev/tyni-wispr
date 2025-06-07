@@ -39,7 +39,26 @@ pip install -e .
 pip install torch --force-reinstall
 ```
 
-### Option 3: From Requirements (handles CUDA automatically)
+### Option 3: Virtual Environment Installation (Recommended for isolation)
+
+**Create and activate virtual environment:**
+```powershell
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment (Windows PowerShell)
+.\venv\Scripts\Activate.ps1
+
+# Install with GPU support
+pip install -r requirements.txt
+pip install -e .
+
+# OR install CPU-only version
+# pip install -e .
+# pip install torch --force-reinstall
+```
+
+### Option 4: From Requirements (handles CUDA automatically)
 ```bash
 pip install -r requirements.txt
 pip install -e .

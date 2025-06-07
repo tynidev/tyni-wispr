@@ -82,7 +82,7 @@ def main():
                     enhancement_time = time.time() - enhancement_start_time
                     
                     if not args.silent:
-                        print(f"🔍 LLM Enhanced: {enhanced_text} (⏱️ {enhancement_time:.2f}s / {enhancement_time*1000:.0f}ms)")
+                        print(f"🔍 LLM Enhanced : {enhanced_text} (⏱️ {enhancement_time:.2f}s / {enhancement_time*1000:.0f}ms)")
                     text = enhanced_text
 
                 # Log performance if enabled
