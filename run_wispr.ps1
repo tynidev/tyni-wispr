@@ -49,18 +49,7 @@ try {
     # Use & operator to run the activation script in the current scope
     & $activateScript
     
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "✅ Virtual environment activated successfully" -ForegroundColor Green
-        Write-Host "🚀 Starting Tyni-Wispr with turbo model in silent mode..." -ForegroundColor Cyan
-        
-        # Run the Python script with turbo model and performance logging
-        python $pythonScript --model turbo --silent
-    } else {
-        Write-Host "❌ Failed to activate virtual environment" -ForegroundColor Red
-        Read-Host "Press Enter to exit"
-        exit 1
-    }
-    
+    python $pythonScript --model turbo --llm-enhance --log-performance
 } catch {
     Write-Host "❌ Error occurred: $_" -ForegroundColor Red
     Write-Host "Please ensure:" -ForegroundColor Yellow

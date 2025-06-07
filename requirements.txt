@@ -1,9 +1,9 @@
+--extra-index-url https://download.pytorch.org/whl/cu128
 openai-whisper
 torch>=2.0.0
-torchvision
-torchaudio
 sounddevice
 numpy
 pyautogui
 scipy
 keyboard
+requests

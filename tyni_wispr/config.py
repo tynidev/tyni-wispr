@@ -1,0 +1,69 @@
+"""Configuration and command-line argument parsing for Tyni-Wispr."""
+
+import argparse
+import sys
+
+# Default configuration
+DEFAULT_MODEL = 'turbo'
+DEFAULT_OLLAMA_MODEL = 'gemma3:12b'
+DEFAULT_HOTKEY = 'right shift'
+DEFAULT_SAMPLERATE = 16000
+DEFAULT_CHANNELS = 1
+
+def parse_arguments():
+    """Parse command-line arguments for the application.
+    
+    Returns:
+        argparse.Namespace: Parsed arguments containing model, log_performance, silent, 
+                           llm_enhance, ollama_model, and help flags.
+    """
+    parser = argparse.ArgumentParser(
+        description="Real-time speech-to-text using Whisper",
+        add_help=False
+    )
+    parser.add_argument(
+        '--model', '-m',
+        type=str,
+        default=DEFAULT_MODEL,
+        help=f'Whisper model to use (default: {DEFAULT_MODEL})'
+    )
+    
+    parser.add_argument(
+        '--log-performance', '-l',
+        action='store_true',
+        help='Enable performance logging to CSV file'
+    )
+    
+    parser.add_argument(
+        '--help', '-h',
+        action='store_true',
+        help='Show help message and exit'
+    )
+    
+    parser.add_argument(
+        '--silent', '-s',
+        action='store_true',
+        help='Suppress startup and completion log messages'
+    )
+    
+    parser.add_argument(
+        '--llm-enhance', '-e',
+        action='store_true',
+        help='Enable LLM text enhancement via Ollama'
+    )
+    
+    parser.add_argument(
+        '--ollama-model',
+        type=str,
+        default=DEFAULT_OLLAMA_MODEL,
+        help=f'Ollama model to use for text enhancement (default: {DEFAULT_OLLAMA_MODEL})'
+    )
+    
+    args = parser.parse_args()
+    
+    if args.help:
+        from .utils import show_help
+        show_help()
+        sys.exit(0)
+    
+    return args
