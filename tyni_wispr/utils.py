@@ -25,8 +25,13 @@ def log_performance(model_name, transcription_time, text_length, audio_duration,
         if not file_exists:
             writer.writeheader()
         
-        time_per_char = transcription_time / text_length if text_length > 0 else 0
-        realtime_factor = transcription_time / audio_duration if audio_duration > 0 else 0
+        # Calculate total processing time including enhancement if available
+        total_processing_time = transcription_time
+        if enhancement_time is not None:
+            total_processing_time += enhancement_time
+        
+        realtime_factor = total_processing_time / audio_duration if audio_duration > 0 else 0
+        time_per_char = total_processing_time / text_length if text_length > 0 else 0
         
         writer.writerow({
             'timestamp': datetime.now().isoformat(),
