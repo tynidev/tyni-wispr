@@ -75,6 +75,7 @@ ARGUMENTS:
     --silent, -s             Suppress startup and completion log messages
     --llm-enhance, -e        Enable LLM text enhancement via Ollama
     --ollama-model           Ollama model to use for enhancement (default: gemma3:12b)
+    --ollama-url             Ollama server URL and port (default: http://localhost:11434)
     --help, -h               Show this help message and exit
 
 HOW TO USE:
@@ -138,15 +139,17 @@ EXAMPLES:
     python tyni-wispr.py -m tiny                 # Use tiny multilingual model
     python tyni-wispr.py --log-performance       # Enable performance logging
     python tyni-wispr.py -m turbo -l             # Use turbo model with logging
-    python tyni-wispr.py --llm-enhance           # Enable LLM text enhancement
-    python tyni-wispr.py -e --ollama-model llama3:8b  # Use different LLM model
+    python tyni-wispr.py --llm-enhance           # Enable LLM text enhancement    python tyni-wispr.py -e --ollama-model llama3:8b  # Use different LLM model
+    python tyni-wispr.py --ollama-url http://192.168.1.100:11434  # Use remote Ollama server
+    python tyni-wispr.py -e --ollama-url http://localhost:8080 --ollama-model llama3:8b  # Custom URL and model
     python tyni-wispr.py -m small.en -l -e -s    # Compact mode with all features
     python tyni-wispr.py --silent                # Suppress console output
     python tyni-wispr.py --help                  # Show this help
 
 LLM ENHANCEMENT:
 ================
-    • Requires Ollama running locally (http://localhost:11434)
+    • Requires Ollama running locally (default: http://localhost:11434) or remotely
+    • Use --ollama-url to specify custom Ollama server URL and port
     • Improves punctuation, grammar, and text clarity
     • Adds processing time but enhances accuracy
     • Use --ollama-model to specify different models

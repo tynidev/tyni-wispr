@@ -6,6 +6,7 @@ import sys
 # Default configuration
 DEFAULT_MODEL = 'turbo'
 DEFAULT_OLLAMA_MODEL = 'gemma3:12b'
+DEFAULT_OLLAMA_URL = 'http://localhost:11434'
 DEFAULT_HOTKEY = 'right shift'
 DEFAULT_SAMPLERATE = 16000
 DEFAULT_CHANNELS = 1
@@ -15,7 +16,7 @@ def parse_arguments():
     
     Returns:
         argparse.Namespace: Parsed arguments containing model, log_performance, silent, 
-                           llm_enhance, ollama_model, and help flags.
+                           llm_enhance, ollama_model, ollama_url, and help flags.
     """
     parser = argparse.ArgumentParser(
         description="Real-time speech-to-text using Whisper",
@@ -45,7 +46,6 @@ def parse_arguments():
         action='store_true',
         help='Suppress startup and completion log messages'
     )
-    
     parser.add_argument(
         '--llm-enhance', '-e',
         action='store_true',
@@ -57,6 +57,13 @@ def parse_arguments():
         type=str,
         default=DEFAULT_OLLAMA_MODEL,
         help=f'Ollama model to use for text enhancement (default: {DEFAULT_OLLAMA_MODEL})'
+    )
+    
+    parser.add_argument(
+        '--ollama-url',
+        type=str,
+        default=DEFAULT_OLLAMA_URL,
+        help=f'Ollama server URL and port (default: {DEFAULT_OLLAMA_URL})'
     )
     
     args = parser.parse_args()

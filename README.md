@@ -91,6 +91,7 @@ tyni-wispr/
 | `--silent` | `-s` | Suppress console output | `False` |
 | `--llm-enhance` | `-e` | Enable LLM text enhancement | `False` |
 | `--ollama-model` | | Ollama model for enhancement | `gemma3:12b` |
+| `--ollama-url` | | Ollama server URL and port | `http://localhost:11434` |
 | `--help` | `-h` | Show help message | |
 
 ## 🎮 Available Models
@@ -106,9 +107,10 @@ tyni-wispr/
 ## 🤖 LLM Enhancement Setup
 
 1. **Install Ollama**: Download from [ollama.ai](https://ollama.ai)
-2. **Start Ollama**: `ollama serve`
+2. **Start Ollama**: `ollama serve` (default: http://localhost:11434)
 3. **Install a model**: `ollama pull gemma3:12b`
 4. **Enable in Tyni-Wispr**: `tyni-wispr --llm-enhance`
+5. **Custom server**: `tyni-wispr --llm-enhance --ollama-url http://your-server:port`
 
 ## 🔍 Troubleshooting
 

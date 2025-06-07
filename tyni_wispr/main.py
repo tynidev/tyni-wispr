@@ -26,11 +26,10 @@ def main():
     print(f"🎤 Starting Tyni-Wispr with model: {args.model}")
     if args.log_performance:
         print("📊 Performance logging enabled - data will be saved to transcription_performance.csv")
-    
-    # Initialize LLM enhancer if enabled
+      # Initialize LLM enhancer if enabled
     enhancer = None
     if args.llm_enhance:
-        enhancer = LLMEnhancer(model=args.ollama_model)
+        enhancer = LLMEnhancer(model=args.ollama_model, base_url=args.ollama_url)
         if not enhancer.check_availability():
             print("⚠️  LLM enhancement disabled - Ollama not available")
             enhancer = None
