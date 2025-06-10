@@ -25,10 +25,9 @@ try:
                     pytorch_requirements.append(line)
                 elif not line.startswith("--"):
                     requirements.append(line)
-except FileNotFoundError:
-    # Fallback requirements if file doesn't exist
+except FileNotFoundError:    # Fallback requirements if file doesn't exist
     requirements = [
-        "openai-whisper",
+        "faster-whisper",
         "torch>=2.0.0",
         "sounddevice",
         "numpy", 
@@ -36,6 +35,7 @@ except FileNotFoundError:
         "scipy",
         "keyboard",
         "requests",
+        "language_tool_python",
     ]
 
 # Add PyTorch as regular requirement if no extra index URLs

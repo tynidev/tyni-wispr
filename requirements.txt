@@ -1,5 +1,5 @@
 --extra-index-url https://download.pytorch.org/whl/cu128
-openai-whisper
+faster-whisper
 torch>=2.0.0
 sounddevice
 numpy
@@ -7,3 +7,6 @@ pyautogui
 scipy
 keyboard
 requests
+language_tool_python
+openai>=1.0.0
+python-dotenv>=1.0.0

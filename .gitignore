@@ -73,3 +73,6 @@ $RECYCLE.BIN/
 
 # CSV output
 transcription_performance.csv
+
+# any specific environment files
+.env

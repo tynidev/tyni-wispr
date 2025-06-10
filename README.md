@@ -8,7 +8,7 @@ Tyni-Wispr is a powerful, modular speech-to-text tool that converts your voice t
 
 - 🎯 **Real-time speech-to-text** using OpenAI's Whisper
 - ⚡ **Hotkey activation** (Right Shift) - press to record, release to transcribe
-- 🤖 **LLM text enhancement** (optional) - improve grammar and punctuation with Ollama
+- 🤖 **LLM text enhancement** (optional) - improve grammar and punctuation with Ollama or Azure OpenAI
 - 🚀 **GPU acceleration** with CUDA support for faster transcription
 - 📊 **Performance logging** to CSV for optimization
 - 🔧 **Modular architecture** - easy to extend and customize
@@ -72,7 +72,8 @@ After installation, you can run Tyni-Wispr from anywhere:
 tyni-wispr --help                    # Show all options
 tyni-wispr                           # Start with default settings
 tyni-wispr -m small.en -l            # Use small English model with logging
-tyni-wispr --llm-enhance             # Enable LLM text enhancement
+tyni-wispr --llm-enhance-ollama      # Enable Ollama LLM text enhancement
+tyni-wispr --llm-enhance-azure-openai # Enable Azure OpenAI LLM text enhancement
 ```
 
 ### Basic Usage:
@@ -108,9 +109,11 @@ tyni-wispr/
 | `--model` | `-m` | Whisper model size | `turbo` |
 | `--log-performance` | `-l` | Enable CSV performance logging | `False` |
 | `--silent` | `-s` | Suppress console output | `False` |
-| `--llm-enhance` | `-e` | Enable LLM text enhancement | `False` |
+| `--llm-enhance-ollama` | `-e` | Enable Ollama LLM text enhancement | `False` |
+| `--llm-enhance-azure-openai` | `-a` | Enable Azure OpenAI LLM text enhancement | `False` |
 | `--ollama-model` | | Ollama model for enhancement | `gemma3:12b` |
 | `--ollama-url` | | Ollama server URL and port | `http://localhost:11434` |
+| `--corrections-config` | | Path to corrections JSON file | `corrections.json` |
 | `--help` | `-h` | Show help message | |
 
 ## 🎮 Available Models
@@ -125,11 +128,17 @@ tyni-wispr/
 
 ## 🤖 LLM Enhancement Setup
 
+### Ollama Setup
 1. **Install Ollama**: Download from [ollama.ai](https://ollama.ai)
 2. **Start Ollama**: `ollama serve` (default: http://localhost:11434)
 3. **Install a model**: `ollama pull gemma3:12b`
-4. **Enable in Tyni-Wispr**: `tyni-wispr --llm-enhance`
-5. **Custom server**: `tyni-wispr --llm-enhance --ollama-url http://your-server:port`
+4. **Enable in Tyni-Wispr**: `tyni-wispr --llm-enhance-ollama`
+5. **Custom server**: `tyni-wispr --llm-enhance-ollama --ollama-url http://your-server:port`
+
+### Azure OpenAI Setup
+1. **Configure Azure OpenAI**: Set up your Azure OpenAI service
+2. **Set environment variables**: Configure your API credentials
+3. **Enable in Tyni-Wispr**: `tyni-wispr --llm-enhance-azure-openai`
 
 ## 🔍 Troubleshooting
 
@@ -158,10 +167,11 @@ pip install -e .
 ```
 
 ### LLM Enhancement Not Working
-- Ensure Ollama is running: `ollama serve`
-- Ensure Ollama is accessible via default url: `http://localhost:11434`
-- Check model availability: `ollama list`
-- Install required model: `ollama pull gemma3:12b`
+- **Ollama**: Ensure Ollama is running: `ollama serve`
+- **Ollama**: Ensure Ollama is accessible via default url: `http://localhost:11434`
+- **Ollama**: Check model availability: `ollama list`
+- **Ollama**: Install required model: `ollama pull gemma3:12b`
+- **Azure OpenAI**: Verify your API credentials and configuration
 
 ## 📈 Performance Tips
 
@@ -169,7 +179,7 @@ pip install -e .
 - **CPU users**: Stick to `tiny` or `small` models
 - **English-only**: Use `.en` model variants for better performance
 - **Background use**: Enable `--silent` mode to reduce console output
-- **Accuracy**: Use `--llm-enhance` for grammar and punctuation improvement
+- **Accuracy**: Use `--llm-enhance-ollama` or `--llm-enhance-azure-openai` for grammar and punctuation improvement
 
 ## 📊 Performance Logging
 

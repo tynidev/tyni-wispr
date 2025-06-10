@@ -8,6 +8,7 @@ DEFAULT_MODEL = 'turbo'
 DEFAULT_OLLAMA_MODEL = 'gemma3:12b'
 DEFAULT_OLLAMA_URL = 'http://localhost:11434'
 DEFAULT_HOTKEY = 'right shift'
+DEFAULT_CANCEL_HOTKEY = 'escape'
 DEFAULT_SAMPLERATE = 16000
 DEFAULT_CHANNELS = 1
 
@@ -46,24 +47,38 @@ def parse_arguments():
         action='store_true',
         help='Suppress startup and completion log messages'
     )
+
+    # Ollama LLM enhancement options
     parser.add_argument(
-        '--llm-enhance', '-e',
+        '--llm-enhance-ollama', '-e',
         action='store_true',
         help='Enable LLM text enhancement via Ollama'
     )
-    
     parser.add_argument(
         '--ollama-model',
         type=str,
         default=DEFAULT_OLLAMA_MODEL,
         help=f'Ollama model to use for text enhancement (default: {DEFAULT_OLLAMA_MODEL})'
     )
-    
     parser.add_argument(
         '--ollama-url',
         type=str,
         default=DEFAULT_OLLAMA_URL,
         help=f'Ollama server URL and port (default: {DEFAULT_OLLAMA_URL})'
+    )
+    
+    # Azure OpenAI LLM enhancement options
+    parser.add_argument(
+        '--llm-enhance-azure-openai', '-a',
+        action='store_true',
+        help='Enable LLM text enhancement via Azure OpenAI'
+    )
+
+    parser.add_argument(
+        '--corrections-config',
+        type=str,
+        default='corrections.json',
+        help='Path to JSON file containing name corrections (default: corrections.json)'
     )
     
     args = parser.parse_args()

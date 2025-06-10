@@ -2,9 +2,12 @@
 
 import csv
 import os
+import json
 from datetime import datetime
+import re
+import language_tool_python
 
-def log_performance(model_name, transcription_time, text_length, audio_duration, enhancement_time=None):
+def log_performance(model_name, transcription_time, text_length, audio_duration, enhancement_time=None, post_process_time=None):
     """Log performance metrics to a CSV file.
     
     Args:
@@ -13,22 +16,25 @@ def log_performance(model_name, transcription_time, text_length, audio_duration,
         text_length (int): Length of the transcribed text in characters.
         audio_duration (float): Duration of the audio in seconds.
         enhancement_time (float, optional): Time taken for LLM enhancement in seconds.
+        post_process_time (float, optional): Time taken for post-processing in seconds.
     """
     log_file = "transcription_performance.csv"
     file_exists = os.path.exists(log_file)
     
     with open(log_file, 'a', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['timestamp', 'model', 'transcription_time_ms', 'text_length', 'audio_duration_ms', 'time_per_char_ms', 'realtime_factor', 'enhancement_time_ms']
+        fieldnames = ['timestamp', 'model', 'transcription_time_ms', 'text_length', 'audio_duration_ms', 'time_per_char_ms', 'realtime_factor', 'enhancement_time_ms', 'post_process_time_ms']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
         # Write header if file is new
         if not file_exists:
             writer.writeheader()
         
-        # Calculate total processing time including enhancement if available
+        # Calculate total processing time including enhancement and post-processing if available
         total_processing_time = transcription_time
         if enhancement_time is not None:
             total_processing_time += enhancement_time
+        if post_process_time is not None:
+            total_processing_time += post_process_time
         
         realtime_factor = total_processing_time / audio_duration if audio_duration > 0 else 0
         time_per_char = total_processing_time / text_length if text_length > 0 else 0
@@ -41,14 +47,53 @@ def log_performance(model_name, transcription_time, text_length, audio_duration,
             'audio_duration_ms': round(audio_duration * 1000, 2),
             'time_per_char_ms': round(time_per_char * 1000, 4),
             'realtime_factor': round(realtime_factor, 3),
-            'enhancement_time_ms': round(enhancement_time * 1000, 2) if enhancement_time is not None else 'None'
+            'enhancement_time_ms': round(enhancement_time * 1000, 2) if enhancement_time is not None else 'None',
+            'post_process_time_ms': round(post_process_time * 1000, 2) if post_process_time is not None else 'None'
         })
 
-def post_process_transcription(text):
+def load_corrections(config_file_path="corrections.json"):
+    """Load name corrections from a JSON configuration file.
+    
+    Args:
+        config_file_path (str): Path to the JSON configuration file.
+        
+    Returns:
+        dict: Dictionary of name corrections {incorrect: correct}.
+    """
+    # Default corrections if file doesn't exist
+    default_corrections = {
+        "  ": " ",
+    }
+    
+    try:
+        if os.path.exists(config_file_path):
+            with open(config_file_path, 'r', encoding='utf-8') as f:
+                corrections = json.load(f)
+                # Validate that it's a dictionary
+                if isinstance(corrections, dict):
+                    return corrections
+                else:
+                    print(f"⚠️  Invalid format in {config_file_path}. Using default corrections.")
+                    return default_corrections
+        else:
+            # Create the default config file if it doesn't exist
+            with open(config_file_path, 'w', encoding='utf-8') as f:
+                json.dump(default_corrections, f, indent=2, ensure_ascii=False)
+            print(f"📝 Created default name corrections file: {config_file_path}")
+            return default_corrections
+    except json.JSONDecodeError as e:
+        print(f"⚠️  Error parsing {config_file_path}: {e}. Using default corrections.")
+        return default_corrections
+    except Exception as e:
+        print(f"⚠️  Error loading {config_file_path}: {e}. Using default corrections.")
+        return default_corrections
+
+def post_process_transcription(text, config_file_path="corrections.json"):
     """Post-process transcribed text by cleaning and formatting it.
     
     Args:
         text (str): Raw transcribed text from Whisper.
+        config_file_path (str): Path to the JSON configuration file for name corrections.
         
     Returns:
         str: Cleaned and formatted text, or empty string if no valid text.
@@ -59,6 +104,24 @@ def post_process_transcription(text):
     # Return empty string if no text
     if not text:
         return ""
+    
+    # Load name corrections from config file
+    corrections = load_corrections(config_file_path)
+    
+    # Apply corrections
+    for incorrect, correct in corrections.items():
+        # Use word boundaries to avoid partial replacements
+        text = re.sub(r'\b' + re.escape(incorrect) + r'\b', correct, text)
+
+    # Optional: Check and fix punctuation using LanguageTool
+    try:
+        tool = language_tool_python.LanguageTool('en-US')
+        matches = tool.check(text)
+        text = language_tool_python.correct(text, matches)
+        tool.close()
+    except:
+        # If LanguageTool fails, continue without punctuation correction
+        pass
     
     # Capitalize the first letter
     text = text[0].upper() + text[1:]
@@ -78,9 +141,11 @@ ARGUMENTS:
     --model, -m              Whisper model to use (default: turbo)
     --log-performance, -l    Enable performance logging to CSV file
     --silent, -s             Suppress startup and completion log messages
-    --llm-enhance, -e        Enable LLM text enhancement via Ollama
+    --llm-enhance-ollama, -e Enable LLM text enhancement via Ollama
+    --llm-enhance-azure-openai, -a Enable LLM text enhancement via Azure OpenAI
     --ollama-model           Ollama model to use for enhancement (default: gemma3:12b)
     --ollama-url             Ollama server URL and port (default: http://localhost:11434)
+    --corrections-config     Path to JSON file containing name corrections (default: corrections.json)
     --help, -h               Show this help message and exit
 
 HOW TO USE:
@@ -88,11 +153,11 @@ HOW TO USE:
     2. Press and hold the right shift key to start recording
     3. Release the right shift key to stop recording
     4. Audio is transcribed using Whisper model
-    5. Text is optionally enhanced with LLM (if --llm-enhance is enabled)
+    5. Text is optionally enhanced with LLM (if --llm-enhance-ollama or --llm-enhance-azure-openai is enabled)
     6. Final text is automatically typed in the active window
 
 WORKFLOW:
-    Recording → Whisper Transcription → [LLM Enhancement] → Text Output
+    Recording → Whisper Transcription → [LLM Enhancement (Ollama/Azure OpenAI)] → Text Output
 
 AVAILABLE WHISPER MODELS:
 ==========================
@@ -144,20 +209,27 @@ EXAMPLES:
     python tyni-wispr.py -m tiny                 # Use tiny multilingual model
     python tyni-wispr.py --log-performance       # Enable performance logging
     python tyni-wispr.py -m turbo -l             # Use turbo model with logging
-    python tyni-wispr.py --llm-enhance           # Enable LLM text enhancement    python tyni-wispr.py -e --ollama-model llama3:8b  # Use different LLM model
+    python tyni-wispr.py --llm-enhance-ollama    # Enable Ollama LLM text enhancement
+    python tyni-wispr.py --llm-enhance-azure-openai  # Enable Azure OpenAI LLM text enhancement
+    python tyni-wispr.py -e --ollama-model llama3:8b  # Use different Ollama model
     python tyni-wispr.py --ollama-url http://192.168.1.100:11434  # Use remote Ollama server
     python tyni-wispr.py -e --ollama-url http://localhost:8080 --ollama-model llama3:8b  # Custom URL and model
-    python tyni-wispr.py -m small.en -l -e -s    # Compact mode with all features
+    python tyni-wispr.py --corrections-config my_corrections.json  # Use custom corrections file
+    python tyni-wispr.py -m small.en -l -e -s    # Compact mode with Ollama enhancement
+    python tyni-wispr.py -m small.en -l -a -s    # Compact mode with Azure OpenAI enhancement
     python tyni-wispr.py --silent                # Suppress console output
     python tyni-wispr.py --help                  # Show this help
 
 LLM ENHANCEMENT:
 ================
-    • Requires Ollama running locally (default: http://localhost:11434) or remotely
+    • Supports both Ollama and Azure OpenAI for text enhancement
+    • Ollama requires local/remote server (default: http://localhost:11434)
+    • Use --llm-enhance-ollama (-e) for Ollama enhancement
+    • Use --llm-enhance-azure-openai (-a) for Azure OpenAI enhancement
     • Use --ollama-url to specify custom Ollama server URL and port
     • Improves punctuation, grammar, and text clarity
     • Adds processing time but enhances accuracy
-    • Use --ollama-model to specify different models
+    • Use --ollama-model to specify different Ollama models
     • Install Ollama models with: ollama pull MODEL_NAME
 
 REQUIREMENTS:

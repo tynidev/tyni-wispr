@@ -1,7 +1,7 @@
 """Model loading and management for Whisper."""
 
 import torch
-import whisper
+import faster_whisper
 
 def load_model(model_size):
     """Load Whisper model with GPU support and fallback to CPU if necessary.
@@ -21,17 +21,17 @@ def load_model(model_size):
     else:
         device = "cpu"
         print("💻 CUDA not available. Using CPU.")
-
+    
     print("🔁 Loading Whisper model...")
     try:
-        model = whisper.load_model(model_size, device=device)
-        print("✅ Model loaded successfully on", device.upper())
+        model = faster_whisper.WhisperModel(model_size, device=device)
+        print("📦 Whisper model:", model_size.strip(), "loaded successfully on", device.upper())
     except Exception as e:
         if device == "cuda":
             print(f"⚠️  GPU loading failed ({str(e)}), falling back to CPU...")
             device = "cpu"
-            model = whisper.load_model(model_size, device=device)
-            print("✅ Model loaded on CPU (fallback)")
+            model = faster_whisper.WhisperModel(model_size, device=device)
+            print("📦 Whisper model:", model_size.strip(), "loaded on CPU (fallback)")
         else:
             raise e
     return model, device

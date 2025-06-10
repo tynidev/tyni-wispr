@@ -1,16 +1,71 @@
 """LLM text enhancement functionality using Ollama."""
 
 import requests
+from .azure_openai_client import AzureOpenAIClient
 
 class LLMEnhancer:
     """Handles text enhancement using Ollama LLM."""
     
-    def __init__(self, model="gemma3:12b", base_url="http://localhost:11434"):
-        self.model = model
-        self.base_url = base_url
-        self.available = False
+    @classmethod
+    def for_ollama(cls, model="gemma3:12b", base_url="http://localhost:11434"):
+        """Create an enhancer that uses only Ollama for text enhancement.
         
-    def check_availability(self, timeout=5):
+        Args:
+            model (str): Ollama model name to use.
+            base_url (str): Ollama base URL.
+            
+        Returns:
+            LLMEnhancer: Instance configured for Ollama only.
+        """
+        instance = cls.__new__(cls)  # Create instance without calling __init__
+        instance.model = model
+        instance.base_url = base_url
+        instance.ollama_available = False
+        
+        # Disable Azure OpenAI for this instance
+        instance.azure_client = None
+        instance.azure_available = False
+        
+        return instance
+    
+    @classmethod
+    def for_azure_openai(cls, api_key=None, endpoint=None, api_version=None, 
+                        deployment_name=None, model_name=None):
+        """Create an enhancer that uses only Azure OpenAI for text enhancement.
+        
+        Args:
+            api_key: Azure OpenAI API key (optional, can use env var)
+            endpoint: Azure OpenAI endpoint URL (optional, can use env var)
+            api_version: API version (optional, can use env var)
+            deployment_name: Deployment name (optional, can use env var)
+            model_name: Model name (optional, can use env var)
+            
+        Returns:
+            LLMEnhancer: Instance configured for Azure OpenAI only.
+        """
+        instance = cls.__new__(cls)  # Create instance without calling __init__
+        
+        # Disable Ollama for this instance
+        instance.model = None
+        instance.base_url = None
+        instance.ollama_available = False
+
+        # Initialize Azure OpenAI client with custom parameters
+        try:
+            instance.azure_client = AzureOpenAIClient(api_key=api_key,
+                                                      endpoint=endpoint,
+                                                      api_version=api_version,
+                                                      deployment_name=deployment_name,
+                                                      model_name=model_name)
+            instance.azure_available = True
+        except Exception as e:
+            print(f"⚠️  Azure OpenAI client initialization failed: {str(e)}")
+            instance.azure_client = None
+            instance.azure_available = False
+        
+        return instance
+        
+    def is_ollama_running(self, timeout=5):
         """Check if Ollama is running and the specified model is available.
         
         Args:
@@ -28,8 +83,8 @@ class LLMEnhancer:
                 available_models = [m['name'] for m in models_data.get('models', [])]
                 
                 if self.model in available_models:
-                    print(f"✅ Ollama running with model: {self.model}")
-                    self.available = True
+                    print(f"📦 Ollama running with model: {self.model}")
+                    self.ollama_available = True
                     return True
                 else:
                     print(f"⚠️  Model '{self.model}' not found. Available models: {', '.join(available_models)}")
@@ -42,10 +97,38 @@ class LLMEnhancer:
         except Exception as e:
             print(f"⚠️  Error checking Ollama: {str(e)}")
             
-        self.available = False
+        self.ollama_available = False
         return False
-        
+    
     def enhance(self, text, timeout=10):
+        if self.azure_available and self.azure_client:
+            return self.enhance_azure_openai(text)
+        elif self.ollama_available:
+            return self.enhance_ollama(text, timeout)
+        else:
+            raise RuntimeError("No LLM client available for enhancement. Please check configuration.")
+    
+    def enhance_azure_openai(self, text):
+        """Enhance text using Azure OpenAI to fix punctuation and improve clarity.
+        
+        Args:
+            text (str): Text to enhance.
+            
+        Returns:
+            str: Enhanced text, or original text if enhancement fails.
+        """
+        if not self.azure_available or not self.azure_client:
+            print("⚠️  Azure OpenAI client not available. Using original text.")
+            return text
+            
+        try:
+            enhanced_text = self.azure_client.enhance_text(text)
+            return enhanced_text
+        except Exception as e:
+            print(f"⚠️  Azure OpenAI enhancement error: {str(e)}")
+            return text
+        
+    def enhance_ollama(self, text, timeout=10):
         """Enhance text using Ollama LLM to fix punctuation and improve clarity.
         
         Args:
@@ -55,13 +138,15 @@ class LLMEnhancer:
         Returns:
             str: Enhanced text, or original text if enhancement fails.
         """
-        if not self.available:
+        if not self.ollama_available:
             return text
             
         try:
             url = f"{self.base_url}/api/generate"
             
-            prompt = f"""Fix any punctuation errors and rewrite the following text for clarity while preserving the original meaning. Only return the corrected text without any explanation or quotes:
+            prompt = f"""Please fix any punctuation errors and rewrite the following text for brevity and clarity while preserving the original meaning.  Specifically,
+substitute 'Christy' to 'Christie', 'Bradon' to 'Braden', and 'Jorrell' or 'Jarell' to 'Jorel'. Return *only* ASCII characters. Do not include any
+non-ASCII characters in the output. **ONLY use the following punctionation characters**: . , ? ! ; : ' " ( ) [ ] {{ }} < > / \ - _ = + * & ^ % $ # @ ~ ` |
 
 {text}"""
             
