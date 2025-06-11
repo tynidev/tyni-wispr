@@ -1,5 +1,6 @@
 """LLM text enhancement functionality using Ollama."""
 
+from typing import Optional
 import requests
 from .azure_openai_client import AzureOpenAIClient
 
@@ -121,9 +122,22 @@ class LLMEnhancer:
             print("⚠️  Azure OpenAI client not available. Using original text.")
             return text
             
+        system_message = """Fix any punctuation errors and rewrite the following text to improve brevity and clarity while preserving the original meaning. Keep slang where appropriate and only use standard ASCII characters. ONLY return revised text."""
+
         try:
-            enhanced_text = self.azure_client.enhance_text(text)
-            return enhanced_text
+            enhanced_text = self.azure_client.simple_chat(
+                prompt=text,
+                system_message=system_message,
+                temperature=0.3,
+                max_tokens=250
+            )
+
+            # Only return enhanced text if it's not empty and reasonable
+            if enhanced_text and len(enhanced_text) < len(text) * 3:  # Sanity check
+                return enhanced_text.strip()
+            
+            # If enhancement fails, return original text
+            return text
         except Exception as e:
             print(f"⚠️  Azure OpenAI enhancement error: {str(e)}")
             return text
@@ -144,9 +158,7 @@ class LLMEnhancer:
         try:
             url = f"{self.base_url}/api/generate"
             
-            prompt = f"""Please fix any punctuation errors and rewrite the following text for brevity and clarity while preserving the original meaning.  Specifically,
-substitute 'Christy' to 'Christie', 'Bradon' to 'Braden', and 'Jorrell' or 'Jarell' to 'Jorel'. Return *only* ASCII characters. Do not include any
-non-ASCII characters in the output. **ONLY use the following punctionation characters**: . , ? ! ; : ' " ( ) [ ] {{ }} < > / \ - _ = + * & ^ % $ # @ ~ ` |
+            prompt = f"""Fix any punctuation errors and rewrite the following text to improve brevity and clarity while preserving the original meaning. Keep slang where appropriate and only use standard ASCII characters. ONLY return revised text.
 
 {text}"""
             

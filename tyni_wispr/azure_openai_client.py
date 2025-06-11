@@ -1,6 +1,8 @@
 import os
 import sys
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
+from openai.types.chat import ChatCompletion
+from openai import APIError, APIConnectionError, RateLimitError, AuthenticationError
 
 try:
     from openai import AzureOpenAI
@@ -70,7 +72,7 @@ class AzureOpenAIClient:
         temperature: float = 1.0,
         top_p: float = 1.0,
         **kwargs
-    ):
+    ) -> Optional[ChatCompletion]:
         """
         Create a chat completion using Azure OpenAI
         
@@ -84,6 +86,11 @@ class AzureOpenAIClient:
         
         Returns:
             Chat completion response
+            
+        Raises:
+            AuthenticationError: If API key is invalid
+            RateLimitError: If rate limit is exceeded
+            APIConnectionError: If connection to API fails
         """
         try:
             response = self.client.chat.completions.create(
@@ -95,9 +102,18 @@ class AzureOpenAIClient:
                 **kwargs
             )
             return response
+        except AuthenticationError as e:
+            print(f"Authentication error: {e}")
+            raise
+        except RateLimitError as e:
+            print(f"Rate limit exceeded: {e}")
+            raise
+        except APIConnectionError as e:
+            print(f"API connection error: {e}")
+            raise
         except Exception as e:
-            print(f"Error making chat completion request: {e}")
-            return None
+            print(f"Unexpected error making chat completion request: {e}")
+            raise
     
     def simple_chat(
         self, 
@@ -105,7 +121,7 @@ class AzureOpenAIClient:
         deployment: Optional[str] = None,
         system_message: str = "You are a helpful assistant.",
         **kwargs
-    ):
+    ) -> Optional[str]:
         """
         Simple chat interface with a single prompt
         
@@ -125,52 +141,11 @@ class AzureOpenAIClient:
         response = self.chat_completion(messages, deployment, **kwargs)
         
         if response:
+            # take the top response from the choices
             return response.choices[0].message.content
         return None
     
-    def enhance_text(
-        self, 
-        text: str, 
-        deployment: Optional[str] = None,
-        temperature: float = 0.3,
-        max_tokens: int = 250,
-        **kwargs
-    ):
-        """
-        Enhance text by fixing punctuation errors and improving clarity
-        
-        Args:
-            text: Text to enhance
-            deployment: Deployment name to use (defaults to instance deployment_name)
-            temperature: Sampling temperature (lower for more consistent output)
-            max_tokens: Maximum tokens to generate
-            **kwargs: Additional parameters
-        
-        Returns:
-            Enhanced text string, or original text if enhancement fails
-        """
-        system_message = """Fix any punctuation errors and rewrite the following text to improve brevity and clarity while preserving the original meaning. Keep slang where appropriate and only use standard ASCII characters. ONLY return revised text."""
-        
-        try:
-            enhanced_text = self.simple_chat(
-                prompt=text,
-                deployment=deployment,
-                system_message=system_message,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                **kwargs
-            )
-            
-            # Only return enhanced text if it's not empty and reasonable
-            if enhanced_text and len(enhanced_text) < len(text) * 3:  # Sanity check
-                return enhanced_text.strip()
-                
-        except Exception as e:
-            print(f"⚠️  Azure OpenAI enhancement error: {str(e)}")
-            
-        return text
-    
-    def get_client_info(self):
+    def get_client_info(self) -> Dict[str, str]:
         """Get information about the configured client"""
         return {
             "endpoint": self.endpoint,
@@ -178,3 +153,17 @@ class AzureOpenAIClient:
             "deployment_name": self.deployment_name,
             "model_name": self.model_name
         }
+    
+    def validate_configuration(self) -> bool:
+        """
+        Validate the client configuration by making a test request
+        
+        Returns:
+            bool: True if configuration is valid
+        """
+        try:
+            response = self.simple_chat("Hello", max_tokens=10)
+            return response is not None
+        except Exception as e:
+            print(f"Configuration validation failed: {e}")
+            return False
