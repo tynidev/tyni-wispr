@@ -26,28 +26,38 @@ def main():
     # Initialize LLM enhancer if enabled
     enhancer = load_enhancer_llm(args)
 
-    # initialize Whisper model
+    # Initialize Whisper model
     model, _ = load_whisper(args.model)
 
-    print("🎯 Ready! Hold the hotkey to record. Press Escape to cancel recording.")
-
-    # Initialize components
+    # Initialize audio recorder
     audio_recorder = AudioRecorder(samplerate=DEFAULT_SAMPLERATE, channels=DEFAULT_CHANNELS)
+
+    # Initialize recording overlay
     overlay = RecordingOverlay()
     
     # Start audio stream
     audio_recorder.start_stream()
 
+    print("🎯 Ready! Hold the hotkey to record. Press Escape to cancel recording.")
     try:
+        # --- Main Loop ---
+        # Wait for hotkey. Record audio. On release/cancel:
+        #  - Transcribe speech
+        #  - Enhance with LLM
+        #  - Post-process text
+        #  - Log performance
+        #  - Type result into active window
+        # Repeat until interrupted.
         while True:            
             keyboard.wait(DEFAULT_HOTKEY)
             if not args.silent:
                 print("🎙️  Recording...")
                 
+            # Record audio
             audio_recorder.start_recording()
-            overlay.show()
+            overlay.show(mode='recording')
             
-            # Wait for either hotkey release or escape key press
+            # Wait for hotkey (Stop/Cancel)
             recording_canceled = False
             while True:
                 if keyboard.is_pressed(DEFAULT_CANCEL_HOTKEY):
@@ -59,7 +69,8 @@ def main():
                     # Hotkey was released, stop recording normally
                     break
                 time.sleep(0.01)  # Small delay to prevent high CPU usage
-            
+
+            # Stop recording (Cancel was pressed or hotkey released)
             audio_recorder.stop_recording()
             overlay.hide()
             
@@ -70,54 +81,63 @@ def main():
             if not args.silent:
                 print("🛑 Recording stopped. Processing...")
 
-            # Show transcribing overlay
+            # Transcription
             overlay.show(mode='transcribing')
 
             # Process the audio
             audio_mono, audio_duration = audio_recorder.process_audio_buffer()
             
-            if audio_mono is not None:
-                # Transcribe
-                transcription_start_time = time.time()
-                text = transcribe_audio(model, audio_mono)
-                transcription_time = time.time() - transcription_start_time
-                
-                if not args.silent:
-                    print(f"📝 Transcription : {text} (⏱️ {transcription_time:.2f}s / {transcription_time*1000:.0f}ms)")
-
-                # Enhance the transcription with LLM if enabled
-                enhancement_time = None
-                if enhancer and text:
-                    enhancement_start_time = time.time()
-                    enhanced_text = enhancer.enhance(text)
-                    enhancement_time = time.time() - enhancement_start_time
-                    
-                    if not args.silent:
-                        print(f"🔍 LLM Enhanced  : {enhanced_text} (⏱️ {enhancement_time:.2f}s / {enhancement_time*1000:.0f}ms)")
-                    text = enhanced_text
-                
-                # Post-process the text
-                post_process_start_time = time.time()
-                text = post_process_transcription(text, args.corrections_config)
-                post_process_time = time.time() - post_process_start_time
-                
-                if not args.silent:
-                    print(f"🔧 Post-processed: {text} (⏱️ {post_process_time:.2f}s / {post_process_time*1000:.0f}ms)")
-
-                # Log performance if enabled
-                if args.log_performance:
-                    log_performance(args.model, transcription_time, len(text), audio_duration, enhancement_time, post_process_time)
-
-                # Hide transcribing overlay before typing
-                overlay.hide()
-
-                # Type the text
-                if text:
-                    pyautogui.write(text + ' ')
-            else:
-                # Hide transcribing overlay even if no audio was recorded
+            # Early exit: No audio recorded
+            if audio_mono is None:
                 overlay.hide()
                 print("⚠️  No audio recorded!")
+                continue
+            
+            # Transcribe
+            transcription_start_time = time.time()
+            text = transcribe_audio(model, audio_mono)
+            transcription_time = time.time() - transcription_start_time
+            
+            if not args.silent:
+                print(f"📝 Transcription : {text} (⏱️ {transcription_time:.2f}s / {transcription_time*1000:.0f}ms)")
+
+            # Early exit: No transcription result
+            if not text:
+                overlay.hide()
+                continue
+
+            # Enhance the transcription with LLM if enabled
+            enhancement_time = None
+            if enhancer:
+                enhancement_start_time = time.time()
+                enhanced_text = enhancer.enhance(text)
+                enhancement_time = time.time() - enhancement_start_time
+                
+                if not args.silent:
+                    print(f"🔍 LLM Enhanced  : {enhanced_text} (⏱️ {enhancement_time:.2f}s / {enhancement_time*1000:.0f}ms)")
+                text = enhanced_text
+            
+            # Post-process the text
+            post_process_start_time = time.time()
+            text = post_process_transcription(text, args.corrections_config)
+            post_process_time = time.time() - post_process_start_time
+            
+            if not args.silent:
+                print(f"🔧 Post-processed: {text} (⏱️ {post_process_time:.2f}s / {post_process_time*1000:.0f}ms)")
+
+            # Log performance if enabled
+            if args.log_performance:
+                log_performance(args.model, transcription_time, len(text), audio_duration, enhancement_time, post_process_time)
+
+            # Hide transcribing overlay before typing
+            overlay.hide()
+
+            # Early exit: No text to type after processing
+            if not text:
+                continue
+                
+            # Type the text
+            pyautogui.write(text + ' ')
 
     except KeyboardInterrupt:
         print("\n👋 Exiting.")
