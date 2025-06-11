@@ -149,9 +149,7 @@ class AzureOpenAIClient:
         Returns:
             Enhanced text string, or original text if enhancement fails
         """
-        system_message = """Please fix any punctuation errors and rewrite the following text for brevity and clarity while preserving the original meaning. Specifically,
-substitute 'Christy' to 'Christie', 'Bradon' to 'Braden', and 'Jorrell' or 'Jarell' to 'Jorel'. Return *only* ASCII characters. Do not include any
-non-ASCII characters in the output. **ONLY use the following punctuation characters**: . , ? ! ; : ' " ( ) [ ] { } < > / \ - _ = + * & ^ % $ # @ ~ ` |"""
+        system_message = """Fix any punctuation errors and rewrite the following text to improve brevity and clarity while preserving the original meaning. Keep slang where appropriate and only use standard ASCII characters. ONLY return revised text."""
         
         try:
             enhanced_text = self.simple_chat(

@@ -4,10 +4,9 @@ import time
 import keyboard
 import pyautogui
 from .config import parse_arguments, DEFAULT_HOTKEY, DEFAULT_CANCEL_HOTKEY, DEFAULT_SAMPLERATE, DEFAULT_CHANNELS
-from .models import load_model
+from .models import load_enhancer_llm, load_whisper
 from .audio import AudioRecorder
 from .transcription import transcribe_audio
-from .enhancement import LLMEnhancer
 from .ui import RecordingOverlay
 from .utils import log_performance, post_process_transcription
 
@@ -25,24 +24,10 @@ def main():
         print("📊 Performance logging enabled - data will be saved to transcription_performance.csv")
     
     # Initialize LLM enhancer if enabled
-    enhancer = None
-    if args.llm_enhance_ollama:
-        enhancer = LLMEnhancer.for_ollama(model=args.ollama_model, base_url=args.ollama_base_url)
-        if not enhancer.is_ollama_running():
-            print("⚠️  LLM enhancement disabled - Ollama not available")
-            enhancer = None
-        else:
-            print(f"📦 LLM Enhance running with Ollama model: {args.ollama_model} and url: {args.ollama_base_url}")
-    if args.llm_enhance_azure_openai:
-        enhancer = LLMEnhancer.for_azure_openai()
-        if not enhancer.azure_available:
-            print("⚠️  LLM enhancement disabled - Azure OpenAI not available")
-            enhancer = None
-        else:
-            print("📦 LLM Enhance running with Azure OpenAI")
+    enhancer = load_enhancer_llm(args)
 
     # initialize Whisper model
-    model, device = load_model(args.model)
+    model, _ = load_whisper(args.model)
 
     print("🎯 Ready! Hold the hotkey to record. Press Escape to cancel recording.")
 

@@ -41,15 +41,17 @@ def parse_arguments():
         action='store_true',
         help='Show help message and exit'
     )
-    
     parser.add_argument(
         '--silent', '-s',
         action='store_true',
         help='Suppress startup and completion log messages'
     )
 
+    # Create mutually exclusive group for LLM enhancement options
+    llm_group = parser.add_mutually_exclusive_group()
+    
     # Ollama LLM enhancement options
-    parser.add_argument(
+    llm_group.add_argument(
         '--llm-enhance-ollama', '-e',
         action='store_true',
         help='Enable LLM text enhancement via Ollama'
@@ -68,7 +70,7 @@ def parse_arguments():
     )
     
     # Azure OpenAI LLM enhancement options
-    parser.add_argument(
+    llm_group.add_argument(
         '--llm-enhance-azure-openai', '-a',
         action='store_true',
         help='Enable LLM text enhancement via Azure OpenAI'

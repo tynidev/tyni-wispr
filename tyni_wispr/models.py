@@ -2,8 +2,9 @@
 
 import torch
 import faster_whisper
+from .enhancement import LLMEnhancer
 
-def load_model(model_size):
+def load_whisper(model_size):
     """Load Whisper model with GPU support and fallback to CPU if necessary.
     
     Args:
@@ -35,3 +36,45 @@ def load_model(model_size):
         else:
             raise e
     return model, device
+
+def load_enhancer_llm(args):
+    """Load and configure the LLM enhancer based on user arguments.
+    
+    This function initializes either an Ollama or Azure OpenAI LLM enhancer
+    based on the command-line arguments provided. It validates that the
+    selected service is available before returning the enhancer instance.
+    
+    Args:
+        args (argparse.Namespace): Parsed command-line arguments containing:
+            - llm_enhance_ollama (bool): Whether to use Ollama enhancement
+            - llm_enhance_azure_openai (bool): Whether to use Azure OpenAI enhancement
+            - ollama_model (str): Name of the Ollama model to use
+            - ollama_base_url (str): Base URL for the Ollama server
+    
+    Returns:
+        LLMEnhancer or None: Configured LLM enhancer instance if available,
+                            None if the selected service is not accessible
+    
+    Note:
+        Only one enhancement service can be active at a time. If both are
+        specified, Ollama takes precedence.
+    """
+    enhancer = None
+    
+    if args.llm_enhance_ollama:
+        enhancer = LLMEnhancer.for_ollama(model=args.ollama_model, base_url=args.ollama_base_url)
+        if not enhancer.is_ollama_running():
+            print("⚠️  LLM enhancement disabled - Ollama not available")
+            enhancer = None
+        else:
+            print(f"📦 LLM Enhance running with Ollama model: {args.ollama_model} and url: {args.ollama_base_url}")
+
+    if not enhancer and args.llm_enhance_azure_openai:
+        enhancer = LLMEnhancer.for_azure_openai()
+        if not enhancer.azure_available:
+            print("⚠️  LLM enhancement disabled - Azure OpenAI not available")
+            enhancer = None
+        else:
+            print("📦 LLM Enhance running with Azure OpenAI")
+    
+    return enhancer
