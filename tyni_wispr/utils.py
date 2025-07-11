@@ -150,11 +150,12 @@ ARGUMENTS:
 
 HOW TO USE:
     1. Run the script: python tyni-wispr.py
-    2. Press and hold the right shift key to start recording
-    3. Release the right shift key to stop recording
-    4. Audio is transcribed using Whisper model
-    5. Text is optionally enhanced with LLM (if --llm-enhance-ollama or --llm-enhance-azure-openai is enabled)
-    6. Final text is automatically typed in the active window
+    2. Press NUM Lock once to start recording
+    3. Press NUM Lock again to stop recording and transcribe
+    4. Press ESC to cancel recording (only while recording)
+    5. Audio is transcribed using Whisper model
+    6. Text is optionally enhanced with LLM (if --llm-enhance-ollama or --llm-enhance-azure-openai is enabled)
+    7. Final text is automatically typed in the active window
 
 WORKFLOW:
     Recording → Whisper Transcription → [LLM Enhancement (Ollama/Azure OpenAI)] → Text Output

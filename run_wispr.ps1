@@ -49,7 +49,7 @@ try {
     # Use & operator to run the activation script in the current scope
     & $activateScript
     
-    python $pythonScript --model turbo --llm-enhance-azure-openai --log-performance
+    python $pythonScript --model turbo --log-performance
 } catch {
     Write-Host "❌ Error occurred: $_" -ForegroundColor Red
     Write-Host "Please ensure:" -ForegroundColor Yellow
